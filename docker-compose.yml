@@ -5,52 +5,52 @@ volumes:
     influxdb-data:
 services:
   influxdb:
-    build: influxdb
+    image: influxdb:1.8  # использование специфичной версии, проверьте доступность для ARM
     container_name: influxdb
-    # privileged added so usb drive can be mounted.
     privileged: true
     volumes:
-        # take care that the mount location "/mnt/influxdb" becomes overwritten
-        # by the mount location specified in the influxdb Dockerfile.
-        - 'influxdb-data:/mnt/influxdb'   
+        - 'influxdb-data:/var/lib/influxdb'
     ports:
-      # The API for InfluxDB is served on port 8086
-      - "8082:8082"
       - "8086:8086"
-      # UDP Port
       - "8089:8089"
     restart: always
+
   telegraf:
-    # Full tag list: https://hub.docker.com/r/library/telegraf/tags/
-    build : telegraf
-    pid: "host"
+    image: telegraf:1.14.5  # проверьте доступность версии для ARM
+    container_name: telegraf
     network_mode: "host"
     privileged: true
-    labels:
-      io.resin.features.balena-socket: '1'
     depends_on:
       - influxdb
     restart: always
     environment:
        - interval=60s
        - flush_interval=60s
+
   grafana:
-    build: grafana 
+    image: grafana/grafana:6.7.4  # проверьте доступность для ARM
+    container_name: grafana
     ports:
        - "3000:3000"
     depends_on:
        - influxdb
     restart: always
+
   mqtt:
-    image: panuwitp/mosquitto-arm
+    image: eclipse-mosquitto:latest  # стандартный образ MQTT для ARM
+    container_name: mqtt
     ports:
       - "1883:1883"
+
   mqtt-test:
-    image: panuwitp/mosquitto-arm
+    image: eclipse-mosquitto:latest
+    container_name: mqtt-test
     ports:
       - "1884:1883"
+
   node-red:
-    build: node-red
+    image: nodered/node-red:latest  # использование официального образа Node-RED
+    container_name: node-red
     volumes:
        - 'node-red-data:/data'
     ports:
@@ -58,8 +58,10 @@ services:
     depends_on:
         - mqtt
     restart: always
+
   node-red-test:
-    build: node-red-test
+    image: nodered/node-red:latest
+    container_name: node-red-test
     volumes:
        - 'node-red-test-data:/data'
     ports:
@@ -67,8 +69,10 @@ services:
     depends_on:
         - mqtt-test
     restart: always
+
   nginx:
-    build : nginx
+    image: nginx:stable-alpine  # использование образа nginx для ARM
+    container_name: nginx
     depends_on:
       - grafana
       - node-red
@@ -77,4 +81,3 @@ services:
        - "80:80"
        - "443:443"
     restart: always
-
